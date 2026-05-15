@@ -1,7 +1,7 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
 import { consultarDetalleOrdenProduccionService } from "../oredenesproduccion/ordenesproduccion.service.js";
-import { actualizarStockProductoDao, actualizarStockProductoDiarioDao, consultarStockDiarioPorSucursalDao, consultarStockProductoDao, consultarStockProductoDiarioDao, consultarStockProductoDiarioOptimizadoDao, consultarStockProductosDao, consultarStockProductosOptimizadoDao, IngresarHistorialStockDao, registrarStockProductoDao, registrarStockProductoDiarioDao } from "./stockProductos.dao.js";
+import { actualizarStockProductoDao, actualizarStockProductoDiarioDao, actualizarStockProductoDiariosBatchDao, actualizarStockProductosBatchDao, consultarStockDiarioPorSucursalDao, consultarStockProductoDao, consultarStockProductoDiarioDao, consultarStockProductoDiarioOptimizadoDao, consultarStockProductosDao, consultarStockProductosOptimizadoDao, IngresarHistorialStockBatchDao, IngresarHistorialStockDao, registrarStockProductoDao, registrarStockProductoDiarioDao } from "./stockProductos.dao.js";
 import { crearPayloadActualizarDebitoStockDiario, crearPayloadActualizarDebitoStockGeneral, crearPayloadEgresoPorVenta, crearPayloadHistorial, crearPayloadStockProductoDiarioExistente, crearPayloadStockProductoDiarioInexistente, payloadStockDiarioIngresoManualExistente, payloadStockDiarioIngresoManualInexistente, payloadStockProductoExistente, payloadStockProductoInexistente } from "./stockProductos.utils.js";
 
 /*------------------------------------------------------------------------------
@@ -371,6 +371,57 @@ export const consultarStockProductoDiarioOptimizadoService = async (idsProductos
         return {
             getStockDiario: (idProducto) => stockMap.get(idProducto) ?? { idStockDiario: 0 }
         };
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const descontarStockPorVentasOptimizado = async (venta) => {
+    try {
+        const { encabezadoVenta, detallesVenta } = venta;
+        const idsProductos = detallesVenta.map(d => d.idProducto);
+
+        const [stockProductos, stockProductosDiarios] = await Promise.all([
+            consultarStockProductosOptimizadoService(idsProductos, encabezadoVenta.idSucursal),
+            consultarStockProductoDiarioOptimizadoService(idsProductos, encabezadoVenta.idSucursal, encabezadoVenta.fechaCreacion)
+        ]);
+
+        const productosStockGeneral = detallesVenta.filter(d => d.controlarStock === 1 && d.controlarStockDiario === 0);
+        const productosStockDiario = detallesVenta.filter(d => !(d.controlarStock === 1 && d.controlarStockDiario === 0));
+
+        // ✅ Acumular todos los payloads sin hacer queries
+        const payloadsStockGeneral = [];
+        const payloadsHistorial = [];
+        const payloadsStockDiario = [];
+
+        productosStockGeneral.forEach((detalle) => {
+            const stockExistente = stockProductos.getStock(detalle.idProducto);
+            if (stockExistente.idStock !== 0) {
+                payloadsStockGeneral.push(
+                    crearPayloadActualizarDebitoStockGeneral(stockExistente, detalle, encabezadoVenta.idSucursal)
+                );
+                payloadsHistorial.push(
+                    crearPayloadEgresoPorVenta(detalle, encabezadoVenta, stockExistente)
+                );
+            }
+        });
+
+        productosStockDiario.forEach((detalle) => {
+            const stockDiarioExistente = stockProductosDiarios.getStockDiario(detalle.idProducto);
+            if (stockDiarioExistente.idStockDiario !== 0) {
+                payloadsStockDiario.push(
+                    crearPayloadActualizarDebitoStockDiario(stockDiarioExistente, detalle, encabezadoVenta.idSucursal)
+                );
+            }
+        });
+
+        // ✅ 3 batch en paralelo — antes eran N*3 queries
+        await Promise.all([
+            payloadsStockGeneral.length > 0 ? actualizarStockProductosBatchDao(payloadsStockGeneral) : Promise.resolve(),
+            payloadsStockDiario.length > 0 ? actualizarStockProductoDiariosBatchDao(payloadsStockDiario) : Promise.resolve(),
+            payloadsHistorial.length > 0 ? IngresarHistorialStockBatchDao(payloadsHistorial) : Promise.resolve(),
+        ]);
+
     } catch (error) {
         throw error;
     }

@@ -348,3 +348,79 @@ try {
         throw new CustomError(dbError);
     }
 }
+
+export const IngresarHistorialStockBatchDao = async (dataHistorialStocks) => {
+    try {
+        const insert = `INSERT INTO HISTORIALSTOCK (idUsuario, idProducto, idSucursal, tipoMovimiento, stockAnterior, stockNuevo, cantidad, fechaMovimiento, observaciones, tipoReferencia)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+
+        const batch = dataHistorialStocks.map(dataHistorialStock => ({
+            sql: insert,
+            args: [
+                dataHistorialStock.idUsuario,
+                dataHistorialStock.idProducto,
+                dataHistorialStock.idSucursal,
+                dataHistorialStock.tipoMovimiento || 'INGRESO',
+                dataHistorialStock.stockAnterior,
+                dataHistorialStock.stockNuevo,
+                dataHistorialStock.cantidad,
+                dataHistorialStock.fechaActualizacion,
+                dataHistorialStock.observaciones || "Ingreso Manual",
+                dataHistorialStock.tipoReferencia || "CONTROL DE STOCK"
+            ]
+        }));
+
+        await Connection.batch(batch, "write"); // 1 sola llamada HTTP
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
+
+export const actualizarStockProductosBatchDao = async (datasStockProducto) => {
+    try {
+        const query = `UPDATE STOCKPRODUCTOS SET stock = ?, fechaActualizacion = ?
+                       WHERE idProducto = ?
+                       AND idSucursal = ?`;
+
+        const batch = datasStockProducto.map(dataStockProducto => ({
+            sql: query,
+            args: [
+                dataStockProducto.stock,
+                dataStockProducto.fechaActualizacion,
+                dataStockProducto.idProducto,
+                dataStockProducto.idSucursal,
+            ]
+        }));
+
+        await Connection.batch(batch, "write"); // 1 sola llamada HTTP
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
+
+export const actualizarStockProductoDiariosBatchDao = async (datasStockProductoDiario) => {
+    try {
+        const query = `UPDATE STOCKPRODUCTOSDIARIOS SET stock = ?, fechaActualizacion = ?
+                       WHERE idProducto = ?
+                       AND idSucursal = ?
+                       AND fechaValidez = ?`;
+
+        const batch = datasStockProductoDiario.map(dataStockProductoDiario => ({
+            sql: query,
+            args: [
+                dataStockProductoDiario.stock,
+                dataStockProductoDiario.fechaActualizacion,
+                dataStockProductoDiario.idProducto,
+                dataStockProductoDiario.idSucursal,
+                dataStockProductoDiario.fechaValidez,
+            ]
+        }));
+
+        await Connection.batch(batch, "write"); // 1 sola llamada HTTP
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
