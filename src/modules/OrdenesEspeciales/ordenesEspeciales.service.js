@@ -1,5 +1,7 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
+import { enviarEmail } from "../emails/enviarcorresos.service.js";
+import generarPlantillaNotificacionOrdenEspecial from "../emails/plantillasenviarcorreo/notifiacion-orden-especial.js";
 import { actualizarOrdenEspecialByIdDao, consultarOrdeEspecialByIdDao, consultarOrdenesEspecialesDao, elminarOrdenEspecialByIdDao, ingresarOrdenEspecialDao } from "./ordenesEspeciales.dao.js";
 
 export const ingresarOrdenEspecialServices = async (ordenEspecial) => {
@@ -10,6 +12,17 @@ export const ingresarOrdenEspecialServices = async (ordenEspecial) => {
             const errorInfo = getError(2);
             throw new CustomError(errorInfo);
         }
+
+        ordenEspecial.ordenEncabezado.idOrdenEspecial = resOrdenEspecial.idOrdenGenerada;
+
+        const dataCorreo = {
+            //correoDestino: 'angel.garcia.gp@gmail.com',
+            correoDestino: 'alisongomezlopez2024@gmail.com',
+            asunto: "Notificación de Orden Especial"
+        };
+
+        const plantillaCorreoOE = generarPlantillaNotificacionOrdenEspecial(ordenEspecial);
+        await enviarEmail(dataCorreo, plantillaCorreoOE);
 
         return resOrdenEspecial;
     }catch(error){
