@@ -173,3 +173,34 @@ CREATE TABLE IF NOT EXISTS activacion_fecha_produccion (
 
 CREATE INDEX IF NOT EXISTS idx_activacion_expira 
 ON activacion_fecha_produccion(expira_en);
+
+--TAbla para registro de notificaciones
+--------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS activacion_notificaciones (
+    idActivacionNotificacion  INTEGER PRIMARY KEY AUTOINCREMENT,
+    idUsuario          INTEGER NOT NULL,
+    tipoEvento         TEXT NOT NULL,
+    activo             INTEGER NOT NULL DEFAULT 0,  -- 0 = false, 1 = true (SQLite no tiene BOOLEAN)
+    fechaCreacion      DATETIME,
+    fechaActualizacion DATETIME,
+    estado             TEXT NOT NULL DEFAULT 'A', 
+    FOREIGN KEY (idUsuario) REFERENCES usuarios(idUsuario)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    UNIQUE (idUsuario, tipoEvento)  -- evita duplicados, base del upsert
+);
+
+------------------------INDEX------------------------------------
+-- El más importante: consulta al ingresar la orden (filtro por evento + activo)
+CREATE INDEX IF NOT EXISTS idx_activacion_notificaciones_evento_activo 
+    ON activacion_notificaciones(tipoEvento, activo);
+
+-- Para el GET de admins (buscar suscripciones de un usuario específico)
+CREATE INDEX IF NOT EXISTS idx_activacion_notificaciones_usuario 
+    ON activacion_notificaciones(idUsuario);
+
+-- Para el upsert (ya cubierto por el UNIQUE, SQLite lo indexa automáticamente)
+-- No requiere índice extra
+
+-------------------------------------------------------------------

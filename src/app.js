@@ -23,6 +23,7 @@ import { eliminacionesRoute } from "./modules/eliminacionesTracking/eliminacione
 import { dashboardDataRoute } from "./modules/dashboardData/dashboardData.routes.js";
 import { surveysRoute } from "./modules/Surveys/surveys.routes.js";
 import { activarFechaProduccionRoute } from "./modules/activar_fecha_produccion/activar-fecha-produccioin.routes.js";
+import { activacionNotificaciones } from "./modules/notificaciones/notificaciones.route.js";
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/api", eliminacionesRoute);
 app.use("/api", dashboardDataRoute);
 app.use("/api", surveysRoute);
 app.use("/api", activarFechaProduccionRoute);
+app.use("/api", activacionNotificaciones);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
