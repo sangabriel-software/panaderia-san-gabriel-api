@@ -2,6 +2,7 @@ import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
 import { enviarEmail } from "../emails/enviarcorresos.service.js";
 import generarPlantillaNotificacionOrdenEspecial from "../emails/plantillasenviarcorreo/notifiacion-orden-especial.js";
+import { consultarActivacionesNotificacionesDao, consultarUsuariosNotificacionesDao } from "../notificaciones/notificaciones.dao.js";
 import { actualizarOrdenEspecialByIdDao, consultarOrdeEspecialByIdDao, consultarOrdenesEspecialesDao, elminarOrdenEspecialByIdDao, ingresarOrdenEspecialDao } from "./ordenesEspeciales.dao.js";
 
 export const ingresarOrdenEspecialServices = async (ordenEspecial) => {
@@ -15,9 +16,10 @@ export const ingresarOrdenEspecialServices = async (ordenEspecial) => {
 
         ordenEspecial.ordenEncabezado.idOrdenEspecial = resOrdenEspecial.idOrdenGenerada;
 
+        const correosUsuarios = await consultarUsuariosNotificacionesDao();
+
         const dataCorreo = {
-            //correoDestino: 'angel.garcia.gp@gmail.com',
-            correoDestino: 'alisongomezlopez2024@gmail.com',
+            correoDestino: correosUsuarios.map(u => u.correoUsuario), 
             asunto: "Notificación de Orden Especial"
         };
 
