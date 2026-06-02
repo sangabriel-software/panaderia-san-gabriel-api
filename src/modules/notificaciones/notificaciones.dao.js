@@ -10,8 +10,8 @@ export const consultarActivacionesNotificacionesDao = async () => {
                         u.apellidoUsuario,
                         u.correoUsuario,
                         u.aliasUsuario,
-                        COALESCE(an.activo, 0) AS activo,        -- si no tiene registro devuelve 0
-                        COALESCE(an.tipoEvento, '') AS tipoEvento
+                        an.activo,
+                        an.tipoEvento
                     FROM USUARIOS u
                     LEFT JOIN activacion_notificaciones an 
                         ON an.idUsuario = u.idUsuario 
@@ -24,6 +24,51 @@ export const consultarActivacionesNotificacionesDao = async () => {
         return result.rows;
     } catch (error) {
         console.log(error);
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
+
+export const activarNotificacionesDao = async (usuariosNoti) => {
+    try {
+        const insertNoti = `INSERT INTO activacion_notificaciones (idUsuario, tipoEvento, activo, fechaCreacion)
+                            VALUES (?, ?, ?, ?);`;
+
+        const batch = usuariosNoti.map((usuario) => ({
+            sql: insertNoti,
+            args: [
+                usuario.idUsuario,
+                usuario.tipoEvento,
+                usuario.activo,
+                usuario.fechaCreacion
+            ]
+        }));
+
+        const result = await Connection.batch(batch);
+        return result.length;
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
+
+export const desactivarNotificacionesDao = async (usuariosNoti) => {
+    try {
+        const deleteNoti = `UPDATE activacion_notificaciones SET activo = ?, fechaActualizacion = ? WHERE idUsuario = ? AND tipoEvento = ?;`;
+
+        const batch = usuariosNoti.map((usuario) => ({
+            sql: deleteNoti,
+            args: [
+                usuario.activo,
+                usuario.fechaActualizacion,
+                usuario.idUsuario,
+                usuario.tipoEvento
+            ]
+        }));
+
+        const result = await Connection.batch(batch);
+        return result.length;
+    } catch (error) {
         const dbError = getDatabaseError(error.message);
         throw new CustomError(dbError);
     }
