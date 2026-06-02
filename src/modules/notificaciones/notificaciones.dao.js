@@ -54,11 +54,12 @@ export const activarNotificacionesDao = async (usuariosNoti) => {
 
 export const desactivarNotificacionesDao = async (usuariosNoti) => {
     try {
-        const deleteNoti = `UPDATE activacion_notificaciones SET activo = 0, fechaActualizacion = ? WHERE idUsuario = ? AND tipoEvento = ?;`;
+        const deleteNoti = `UPDATE activacion_notificaciones SET activo = ?, fechaActualizacion = ? WHERE idUsuario = ? AND tipoEvento = ?;`;
 
         const batch = usuariosNoti.map((usuario) => ({
             sql: deleteNoti,
             args: [
+                usuario.activo,
                 usuario.fechaActualizacion,
                 usuario.idUsuario,
                 usuario.tipoEvento
