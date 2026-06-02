@@ -57,6 +57,8 @@ VALUES (14, 'Crear Encuestas', 'Crear y gestionar encuestas', '/encuestas-config
 INSERT INTO permisos("idPermiso", "nombrePermiso", "descripcionPermiso", "rutaAcceso", "fechaCreacion", "estado") 
 VALUES (15, 'Activar Fecha Producción', 'Activar fecha de producción', '/activar-fecha-produccion', '2026-01-02', 'A');
 
+INSERT INTO permisos("idPermiso", "nombrePermiso", "descripcionPermiso", "rutaAcceso", "fechaCreacion", "estado") 
+VALUES (16, 'Habilitar Notificaciones', 'Habilitar notificaciones', '/habilitar-notificaciones', '2026-05-2', 'A');
 
 -- Crear Rol administrador por defecto
 INSERT INTO ROLES (idRol, nombreRol, descripcionRol, fechaCreacion, estado) VALUES
@@ -78,7 +80,8 @@ INSERT INTO ROLESPERMISOS (idRol, idPermiso) VALUES
 (1, 12),
 (1, 13),
 (1, 14),
-(1, 15);
+(1, 15)
+(1, 16);
 
 -- Crear usuario administrador
 INSERT INTO USUARIOS (idUsuario, nombreUsuario, apellidoUsuario, usuario, contrasena, correoUsuario, idRol, estadoUsuario, fechaCreacion, estado) VALUES

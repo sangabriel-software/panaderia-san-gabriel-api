@@ -1,6 +1,6 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
-import { consultarActivacionesNotificacionesDao } from "./notificaciones.dao.js";
+import { activarNotificacionesDao, consultarActivacionesNotificacionesDao, desactivarNotificacionesDao } from "./notificaciones.dao.js";
 
 export const consultarActivacionesNotificacionesService = async () => {
     try{
@@ -11,6 +11,34 @@ export const consultarActivacionesNotificacionesService = async () => {
         }
         
         return usuariosNoti;
+    }
+    catch(error){
+        throw error;
+    }
+};
+
+export const activarNotificacionesService = async (usuariosNoti) => {
+    try{
+        const result = await activarNotificacionesDao(usuariosNoti);
+        if (result === 0) {
+            const error = getError(2);
+            throw new CustomError(error);
+        }
+        return result;
+    }
+    catch(error){
+        throw error;
+    }
+};
+
+export const desactivarNotificacionesService = async (usuariosNoti) => {
+    try{
+        const result = await desactivarNotificacionesDao(usuariosNoti);
+        if (result === 0) {
+            const error = getError(3);
+            throw new CustomError(error);
+        }
+        return result;
     }
     catch(error){
         throw error;
