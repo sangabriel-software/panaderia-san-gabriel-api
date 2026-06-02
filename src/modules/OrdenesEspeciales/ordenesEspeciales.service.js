@@ -18,13 +18,16 @@ export const ingresarOrdenEspecialServices = async (ordenEspecial) => {
 
         const correosUsuarios = await consultarUsuariosNotificacionesDao();
 
-        const dataCorreo = {
+        if(correosUsuarios.length > 0){
+            
+            const dataCorreo = {
             correoDestino: correosUsuarios.map(u => u.correoUsuario), 
             asunto: "Notificación de Orden Especial"
-        };
+            };
 
-        const plantillaCorreoOE = generarPlantillaNotificacionOrdenEspecial(ordenEspecial);
-        await enviarEmail(dataCorreo, plantillaCorreoOE);
+            const plantillaCorreoOE = generarPlantillaNotificacionOrdenEspecial(ordenEspecial);
+            await enviarEmail(dataCorreo, plantillaCorreoOE);
+        }
 
         return resOrdenEspecial;
     }catch(error){
