@@ -24,7 +24,6 @@ export const consultarFechasProduccionDao = async (fecha) => {
 
         return result.rows;
     } catch (error) {
-        console.log(error);
         const dbError = getDatabaseError(error.message);
         throw new CustomError(dbError);
     }

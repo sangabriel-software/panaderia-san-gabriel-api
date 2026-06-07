@@ -16,35 +16,70 @@ import { crearPayloadSobrante, procesarVentaService } from "./ventas.utils.js";
 
 export const ingresarVentaService = async (venta) => {
   try {
-    // Procesar detalles de la venta antes de ingresarla
+
+    console.time("VENTA_TOTAL");
+
+    console.time("procesarVenta");
     const ventaDetalleProcesado = await procesarVentaService(venta);
-    
-    // Guardar la venta en la base de datos
+    console.timeEnd("procesarVenta");
+
+    console.time("ingresarVentaDao");
     const resVenta = await ingresarVentaDao(ventaDetalleProcesado);
+    console.timeEnd("ingresarVentaDao");
 
     if (resVenta === 0) {
       throw new CustomError(getError(2));
     }
 
-    /* Ingresar sobrantes */
-    const paylodSobrante = crearPayloadSobrante(resVenta.idVenta, venta.detalleVenta);
+    console.time("sobrantes");
+    const paylodSobrante = crearPayloadSobrante(
+      resVenta.idVenta,
+      venta.detalleVenta
+    );
     await ingresarSobranteService(paylodSobrante);
+    console.timeEnd("sobrantes");
 
-    await descontarStockPorVentasOptimizado(ventaDetalleProcesado);//debitar stock de las ventas ingresadas
+    console.time("descontarStock");
+    await descontarStockPorVentasOptimizado(
+      ventaDetalleProcesado
+    );
+    console.timeEnd("descontarStock");
 
-    const detalleingreso = crearPayloadingresos(resVenta.idVenta, ventaDetalleProcesado);
+    console.time("registrarIngreso");
+    const detalleingreso = crearPayloadingresos(
+      resVenta.idVenta,
+      ventaDetalleProcesado
+    );
 
-    await registrarIngresoDiarioPorTurnoService(detalleingreso);
+    await registrarIngresoDiarioPorTurnoService(
+      detalleingreso
+    );
+    console.timeEnd("registrarIngreso");
 
-    if(venta.gastosDiarios && venta.gastosDiarios.detalleGastosDiarios){
-      await ingresarGastosDiariosService(resVenta.idVenta, venta.gastosDiarios);
+    if (
+      venta.gastosDiarios &&
+      venta.gastosDiarios.detalleGastosDiarios
+    ) {
+      console.time("gastos");
+      await ingresarGastosDiariosService(
+        resVenta.idVenta,
+        venta.gastosDiarios
+      );
+      console.timeEnd("gastos");
     }
 
     if (venta.encabezadoVenta.idOrdenProduccion) {
-      await actualizarEstadoOrdenProduccionServices(resVenta.encabezadoVenta.idOrdenProduccion);
+      console.time("cerrarOrden");
+      await actualizarEstadoOrdenProduccionServices(
+        resVenta.encabezadoVenta.idOrdenProduccion
+      );
+      console.timeEnd("cerrarOrden");
     }
 
+    console.timeEnd("VENTA_TOTAL");
+
     return resVenta;
+
   } catch (error) {
     throw error;
   }

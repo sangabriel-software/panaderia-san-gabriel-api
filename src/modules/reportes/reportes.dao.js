@@ -294,7 +294,6 @@ export const generarReporteBalanceStokDao = async (fecha, idSucursal, turno) => 
         return result.rows;
         
     } catch (error) {
-        console.log(error);
         const dbError = getDatabaseError(error.message);
         throw new CustomError(dbError);
     }
@@ -317,8 +316,6 @@ export const generarReporteSobrantesDao = async (fecha, idSucursal) => {
         
         // Para cada venta, obtener sus detalles
         const ventasConDetalles = [];
-
-        console.log(ventasResult.rows);
         
         for (const venta of ventasResult.rows) {
             const scriptDetalles = `
