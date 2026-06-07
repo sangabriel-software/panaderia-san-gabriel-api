@@ -117,11 +117,10 @@ export const consultarDetalleVentaService = async (idVenta) => {
 
 export const eliminarVentaService = async (idVenta) => {
   try {
-    await revertirVentaServices(idVenta);
-
-    const ventaPorId = await consultarVentaporId(idVenta);
-    const detalleVenta = await consultarDetalleVentaDao(idVenta);
-
+    const [detalleVenta, ventaPorId] = await Promise.all([
+      revertirVentaServices(idVenta),   // ya devuelve el detalle
+      consultarVentaporId(idVenta),
+    ]);
 
     const resElminacion = await eliminarVentaDao(idVenta);
     if (resElminacion === 0) {
@@ -129,22 +128,23 @@ export const eliminarVentaService = async (idVenta) => {
       throw new CustomError(error);
     }
 
-   const eliminacionTracking = {
-    procesoEliminado: 'VENTA',
-    idReferencia: idVenta,
-    idUsuario: ventaPorId.idUsuario,
-    idSucursal: ventaPorId.idSucursal,
-    turno: ventaPorId.ventaTurno,
-    fechaEliminacion: ventaPorId.fechaVenta
-   }
+    const eliminacionTracking = {
+      procesoEliminado: 'VENTA',
+      idReferencia:     idVenta,
+      idUsuario:        ventaPorId.idUsuario,
+      idSucursal:       ventaPorId.idSucursal,
+      turno:            ventaPorId.ventaTurno,
+      fechaEliminacion: ventaPorId.fechaVenta,
+    };
 
-   await registrarEliminacionPorDia(eliminacionTracking);
+    const detalleEliminacion = detalleVentaEliminadaPayload(detalleVenta);
 
-   const detalleEliminacion = detalleVentaEliminadaPayload(detalleVenta);
+    await Promise.all([
+      registrarEliminacionPorDia(eliminacionTracking),
+      registrarVentaEliminadaDao(detalleEliminacion),
+    ]);
 
-   await registrarVentaEliminadaDao(detalleEliminacion);
-
-  return resElminacion;
+    return resElminacion;
   } catch (error) {
     throw error;
   }
@@ -223,6 +223,8 @@ export const revertirVentaServices = async (idVenta) => {
                 tipoReferencia:      'VENTA',
             });
         });
+
+        return detalleProductosVenta;
 
         // — 3 batch en paralelo
         await Promise.all([

@@ -90,56 +90,60 @@ export const eliminarVentaDao = async (idVenta) => {
 }
 
 export const consultarDetalleVentaDao = async (idVenta) => {
-  try{
-    const scriptVenta = `select v.idVenta, v.idUsuario, v.idVenta, u.usuario, concat(u.nombreUsuario, ' ', u.apellidoUsuario)nombreUsuario, v.idSucursal, v.ventaTurno, s.nombreSucursal,
-                          v.fechaVenta, v.totalVenta, v.estadoVenta 
-                          from ventas v
-                          INNER JOIN usuarios u on v.idUsuario = u.idUsuario
-                          INNER JOIN sucursales s on v.idSucursal = s.idSucursal
-                          where v.idVenta = ?;`;
-                          
+  try {
+    const scriptVenta = `
+      SELECT v.idVenta, v.idUsuario, u.usuario, 
+             CONCAT(u.nombreUsuario, ' ', u.apellidoUsuario) nombreUsuario,
+             v.idSucursal, v.ventaTurno, s.nombreSucursal,
+             v.fechaVenta, v.totalVenta, v.estadoVenta 
+      FROM ventas v
+      INNER JOIN usuarios u ON v.idUsuario = u.idUsuario
+      INNER JOIN sucursales s ON v.idSucursal = s.idSucursal
+      WHERE v.idVenta = ?`;
+
     const venta = await Connection.execute(scriptVenta, [idVenta]);
 
-    if( venta.rows.length === 0){
-      return 0;
-    }
+    if (venta.rows.length === 0) return 0;
 
-    const scriptDetalleVenta = `select dv.idDetalleVenta, dv.idVenta, dv.IdProducto, p.nombreProducto, p.controlarStock,
-                                  p.controlarStockDiario, dv.cantidadVendida, dv.precioUnitario, dv.descuento,
-                                  dv.subTotal from detallesventas dv
-                                  INNER JOIN ventas v on dv.idVenta = v.idVenta
-                                  INNER JOIN productos p on dv.idProducto = p.idProducto
-                                  where dv.idVenta = ?;`;
+    const scriptDetalleVenta = `
+      SELECT dv.idDetalleVenta, dv.idVenta, dv.idProducto, p.nombreProducto, p.controlarStock,
+             p.controlarStockDiario, dv.cantidadVendida, dv.precioUnitario, dv.descuento, dv.subTotal 
+      FROM detallesventas dv
+      INNER JOIN ventas v ON dv.idVenta = v.idVenta
+      INNER JOIN productos p ON dv.idProducto = p.idProducto
+      WHERE dv.idVenta = ?`;
 
-    const detalleVenta = await Connection.execute(scriptDetalleVenta, [idVenta]);
+    const scriptIngresos = `
+      SELECT i.idIngreso, i.idVenta, i.montoTotalIngresado, i.montoTotalGastos, 
+             i.montoEsperado, i.diferencia, i.fechaIngreso
+      FROM ingresosdiarios i
+      INNER JOIN ventas v ON i.idVenta = v.idVenta
+      WHERE i.idVenta = ?`;
 
+    const scriptGastos = `
+      SELECT dg.idGastoDiarioDetalle, dg.idGastoDiario, dg.DetalleGasto, dg.subtotal
+      FROM GASTOSDIARIOSDETALLES dg 
+      INNER JOIN GASTOSDIARIOS g ON dg.idGastoDiario = g.idGastoDiario
+      WHERE g.idVenta = ?`;
 
-    const scriptIngresos = `select i.idIngreso, i.idVenta, i.montoTotalIngresado, i.montoTotalGastos, i.montoEsperado, i.diferencia, i.fechaIngreso
-                            from ingresosdiarios i
-                            INNER JOIN ventas v on i.idVenta = v.idVenta
-                            where i.idVenta = ?;`;
-    
-    const detalleIngresos = await Connection.execute(scriptIngresos, [idVenta]);
-
-    const scriptGastos = `select dg.idGastoDiarioDetalle, dg.idGastoDiario, dg.DetalleGasto, dg.subtotal
-                            from GASTOSDIARIOSDETALLES dg 
-                            inner join GASTOSDIARIOS g on dg.idGastoDiario = g.idGastoDiario
-                            where g.idVenta = ?;`;
-    
-    const detalleGastos = await Connection.execute(scriptGastos, [idVenta]);
+    const [detalleVenta, detalleIngresos, detalleGastos] = await Promise.all([
+      Connection.execute(scriptDetalleVenta, [idVenta]),
+      Connection.execute(scriptIngresos, [idVenta]),
+      Connection.execute(scriptGastos, [idVenta]),
+    ]);
 
     return {
       encabezadoVenta: venta.rows[0],
       detalleVenta: detalleVenta.rows,
       detalleIngresos: detalleIngresos.rows[0],
-      detalleGastos: detalleGastos.rows
-    }
+      detalleGastos: detalleGastos.rows,
+    };
 
-  }catch(error){
+  } catch (error) {
     const dbError = getDatabaseError(error.message);
     throw new CustomError(dbError);
   }
-}
+};
 
 export const consultarVentaporId = async (idVenta) => {
   try{
