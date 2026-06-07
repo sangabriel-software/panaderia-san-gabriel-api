@@ -10,7 +10,7 @@ import { actuailizarEstadoOrdenProd } from "../oredenesproduccion/ordenesproducc
 import { actualizarEstadoOrdenProduccionServices } from "../oredenesproduccion/ordenesproduccion.service.js";
 import { ingresarSobranteService } from "../sobrantes/sobrantes.service.js";
 import { actualizarStockProductoDao, actualizarStockProductoDiarioDao, consultarStockProductoDao, consultarStockProductoDiarioDao, IngresarHistorialStockDao } from "../StockProductos/stockProductos.dao.js";
-import { descontarStockPorVentasOptimizado } from "../StockProductos/stockProductos.service.js";
+import { consultarStockProductoDiarioOptimizadoService, consultarStockProductosOptimizadoService, descontarStockPorVentasOptimizado } from "../StockProductos/stockProductos.service.js";
 import { consultarDetalleVentaDao, consultarVentaporId, consultarVentasPorUsuarioDao, eliminarVentaDao, ingresarVentaDao, } from "./ventas.dao.js";
 import { crearPayloadSobrante, procesarVentaService } from "./ventas.utils.js";
 
@@ -156,14 +156,16 @@ export const revertirVentaServices = async (idVenta) => {
         const {encabezadoVenta, detalleVenta} = detalleProductosVenta;
 
         await actuailizarEstadoOrdenProd( encabezadoVenta.fechaVenta, encabezadoVenta.ventaTurno );
-
+        const stockProductos = await consultarStockProductosOptimizadoService(detalleVenta.map(d => d.idProducto), encabezadoVenta.idSucursal);
+        const stockProductosDiarios = await consultarStockProductoDiarioOptimizadoService(detalleVenta.map(d => d.idProducto), encabezadoVenta.idSucursal, obtenerSoloFecha(encabezadoVenta.fechaVenta));
+        
         return Promise.all(
             detalleVenta.map( async (producto) => {
               
                 try{
 
                   if(producto.controlarStock === 1 && producto.controlarStockDiario === 0){
-                    const productoEnStock = await consultarStockProductoDao(producto.idProducto, encabezadoVenta.idSucursal);
+                    const productoEnStock = stockProductos.getStock(producto.idProducto);
 
                     const payloadRevertir = {
                         idSucursal: encabezadoVenta.idSucursal,
@@ -190,7 +192,7 @@ export const revertirVentaServices = async (idVenta) => {
                     await IngresarHistorialStockDao(payloadHistorial);
 
                   }else{
-                    const productoEnStockDiario = await consultarStockProductoDiarioDao(producto.idProducto, encabezadoVenta.idSucursal, obtenerSoloFecha(encabezadoVenta.fechaVenta));
+                    const productoEnStockDiario = stockProductosDiarios.getStockDiario(producto.idProducto);
 
                     const payloadRevertir = {
                         idSucursal: encabezadoVenta.idSucursal,
