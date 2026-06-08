@@ -307,6 +307,53 @@ export const consultarStockDiarioPorSucursalDao = async (idSucursal, fecha) => {
 //Consultas optimizadas
 //----------------------------------------------------------------------------- 
 //----------------------------------------------------------------------------- 
+export const registrarStockProductoBatchDao = async (datasStockProducto) => {
+    try {
+        const query = `INSERT INTO STOCKPRODUCTOS (idProducto, idSucursal, stock, fechaActualizacion, fechaCreacion)
+                       VALUES (?, ?, ?, ?, ?)`;
+
+        const batch = datasStockProducto.map(dataStockProducto => ({
+            sql: query,
+            args: [
+                dataStockProducto.idProducto,
+                dataStockProducto.idSucursal,
+                dataStockProducto.stock,
+                dataStockProducto.fechaActualizacion,
+                dataStockProducto.fechaCreacion
+            ]
+        }));
+
+        await Connection.batch(batch, "write");
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
+
+export const registrarStockProductoDiarioBatchDao = async (datasStockProductoDiario) => {
+    try {
+        const query = `INSERT INTO STOCKPRODUCTOSDIARIOS (idProducto, idSucursal, stock, fechaValidez, fechaActualizacion, fechaCreacion)
+                       VALUES (?, ?, ?, ?, ?, ?)`;
+
+        const batch = datasStockProductoDiario.map(dataStockProductoDiario => ({
+            sql: query,
+            args: [
+                dataStockProductoDiario.idProducto,
+                dataStockProductoDiario.idSucursal,
+                dataStockProductoDiario.stock,
+                dataStockProductoDiario.fechaValidez,
+                dataStockProductoDiario.fechaActualizacion,
+                dataStockProductoDiario.fechaCreacion
+            ]
+        }));
+
+        await Connection.batch(batch, "write");
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}
+
 export const consultarStockProductosOptimizadoDao = async (idsProductos, idSucursal) => {
     try {
         const placeholders = idsProductos.map(() => "?").join(", ");
@@ -322,7 +369,6 @@ export const consultarStockProductosOptimizadoDao = async (idsProductos, idSucur
         throw new CustomError(dbError);
     }
 }
-
 
 export const consultarStockProductoDiarioOptimizadoDao = async (idsProductos, idSucursal, fechaValidez) => {
 try {
