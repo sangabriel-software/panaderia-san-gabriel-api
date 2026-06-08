@@ -1,6 +1,6 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
-import { actualizarRecetaDao, consultarRecetaDao, consultarRecetasDao, elminarRecetaDao, ingresarRecetaDao } from "./recetas.dao.js";
+import { actualizarRecetaDao, consultarRecetaBatchDao, consultarRecetaDao, consultarRecetasDao, elminarRecetaDao, ingresarRecetaDao } from "./recetas.dao.js";
 
 export const consultarRecetasService = async () => {
   try {
@@ -79,3 +79,30 @@ export const eliminarRecetaService = async (receta) => {
     throw error;
   }
 }
+
+// ------------------------------------------------------
+// ------------- SERVICIOS OPTIMIZADOS  ------------------
+// ------------------------------------------------------
+export const consultarRecetaBatchService = async (idsProductos) => {
+    try {
+        const rows = await consultarRecetaBatchDao(idsProductos);
+
+        if (rows.length === 0) {
+            const errorInfo = getError(1);
+            throw new CustomError(errorInfo);
+        }
+
+        // Map<idProducto, ingredientes[]>
+        const map = new Map();
+        rows.forEach(row => {
+            if (!map.has(row.idProducto)) {
+                map.set(row.idProducto, []);
+            }
+            map.get(row.idProducto).push(row);
+        });
+
+        return map;
+    } catch (error) {
+        throw error;
+    }
+};

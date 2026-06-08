@@ -50,3 +50,43 @@ CREATE INDEX IF NOT EXISTS idx_productos_categoria
 -- Compuesto: categoría + estado activo juntos
 CREATE INDEX IF NOT EXISTS idx_productos_estado_categoria 
     ON PRODUCTOS (estado, idCategoria);
+
+
+-- ============================================================
+-- ÍNDICES PARA TABLA STOCKPRODUCTOSDIARIOS
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_stockproductosdiarios_producto_sucursal_fecha_estado
+ON STOCKPRODUCTOSDIARIOS (
+    idProducto,
+    idSucursal,
+    fechaValidez,
+    estado
+);
+
+-- ============================================================
+-- ÍNDICES PARA TABLA STOCKPRODUCTOS
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_stockproductos_producto_sucursal_estado
+ON STOCKPRODUCTOS (
+    idProducto,
+    idSucursal,
+    estado
+);
+
+-- ============================================================
+-- ÍNDICES PARA TABLA DETALLEDESCUENTODESTOCK
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_detalledescuentostock_producto_fecha
+ON DETALLEDESCUENTODESTOCK (
+    idProducto,
+    fechaDescuento
+);
+
+-- ============================================================
+-- ÍNDICES PARA TABLA DETALLESORDENESPRODUCCION
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_detallesordenesproduccion_orden_producto
+ON DETALLESORDENESPRODUCCION (
+    idOrdenProduccion,
+    idProducto
+);

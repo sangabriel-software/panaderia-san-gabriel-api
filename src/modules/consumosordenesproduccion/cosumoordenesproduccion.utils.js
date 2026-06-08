@@ -1,4 +1,4 @@
-import { consultarRecetaService } from "../recetas/recetas.service.js";
+import { consultarRecetaBatchService, consultarRecetaService } from "../recetas/recetas.service.js";
 
 export const CalcularCantidadIngredientes = async (detalleOrden) => {
   const payload = []; // Array para almacenar el payload final
@@ -48,4 +48,36 @@ export const CalcularCantidadIngredientes = async (detalleOrden) => {
 
   // Retornamos el payload final ordenado por idDetalleOrdenProduccion
   return payload.sort((a, b) => a.idDetalleOrdenProduccion - b.idDetalleOrdenProduccion);
+};
+
+
+// ------------------------------------------------------
+// ------------- SERVICIOS OPTIMIZADOS  ------------------
+// ------------------------------------------------------
+export const CalcularCantidadIngredientesOptimizado = async (detalleOrden) => {
+    const idsProductos = detalleOrden.detallesOrden.map(d => d.idProducto);
+
+    // 1 sola query para todas las recetas
+    const recetasMap = await consultarRecetaBatchService(idsProductos);
+
+    const payload = [];
+
+    detalleOrden.detallesOrden.forEach((detalle) => {
+        const receta = recetasMap.get(detalle.idProducto);
+
+        // Sin receta, se omite
+        if (!receta) return;
+
+        receta.forEach((ingrediente) => {
+            payload.push({
+                idDetalleOrdenProduccion: detalle.idDetalleOrdenProduccion,
+                idIngrediente:            ingrediente.idIngrediente,
+                cantidadUsada:            parseFloat((ingrediente.cantidadNecesaria * detalle.cantidadUnidades).toFixed(2)),
+                unidadMedida:             ingrediente.unidadMedida,
+                fechaCreacion:            detalle.fechaCreacion,
+            });
+        });
+    });
+
+    return payload.sort((a, b) => a.idDetalleOrdenProduccion - b.idDetalleOrdenProduccion);
 };
