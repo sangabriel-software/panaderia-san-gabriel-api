@@ -224,8 +224,6 @@ export const revertirVentaServices = async (idVenta) => {
             });
         });
 
-        return detalleProductosVenta;
-
         // — 3 batch en paralelo
         await Promise.all([
             payloadsStockGeneral.length > 0 ? actualizarStockProductosBatchDao(payloadsStockGeneral)      : Promise.resolve(),
@@ -233,6 +231,7 @@ export const revertirVentaServices = async (idVenta) => {
             payloadsHistorial.length    > 0 ? IngresarHistorialStockBatchDao(payloadsHistorial)            : Promise.resolve(),
         ]);
 
+        return detalleProductosVenta;
     } catch (error) {
         throw error;
     }
