@@ -1,6 +1,6 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
-import { consultarCantidadUnidadesDao, eliminarcantidadUnidadesDao, ingresarCantidaUnidaesDao, modificarCantidaUnidaesDao } from "./ordenesprodconfig.dao.js";
+import { consultarCantidadUnidadesBatchDao, consultarCantidadUnidadesDao, eliminarcantidadUnidadesDao, ingresarCantidaUnidaesDao, modificarCantidaUnidaesDao } from "./ordenesprodconfig.dao.js";
 
 export const ingrearCantidadUnidadesService = async (dataProducto) => {
   try{
@@ -53,3 +53,20 @@ export const eliminarcantidadUnidadeServices = async (idProducto) => {
     throw error;
   }
 }
+
+// ------------------------------------------------------
+// ------------- SERVICIOS OPTIMIZADOS  -----------------
+//-------------------------------------------------------
+export const consultarCantidadUnidadesBatchService = async (idsProductos) => {
+    try {
+        const rows = await consultarCantidadUnidadesBatchDao(idsProductos);
+
+        // 👈 lógica del Map vive aquí
+        const map = new Map();
+        rows.forEach(row => map.set(row.idProducto, row.unidadesPorBandeja));
+
+        return map;
+    } catch (error) {
+        throw error;
+    }
+};

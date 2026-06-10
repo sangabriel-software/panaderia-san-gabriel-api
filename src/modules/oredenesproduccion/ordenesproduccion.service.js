@@ -1,10 +1,10 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
 import { registrarBatchConsumoOrdenProduccionServices } from "../consumosordenesproduccion/consumosordenes.service.js";
-import { CalcularCantidadIngredientes } from "../consumosordenesproduccion/cosumoordenesproduccion.utils.js";
+import { CalcularCantidadIngredientes, CalcularCantidadIngredientesOptimizado } from "../consumosordenesproduccion/cosumoordenesproduccion.utils.js";
 import { elminarStockDiarioService, procesarStockPorOrdenProduccionServices } from "../StockProductos/stockProductos.service.js";
 import { actualizarEstadoOrdenProduccionDao, consultarDetalleOrdenPorCriteriosDao, consultarDetalleOrdenProduccionDao, consultarOrdenProduccionDao, consultarUnidadesDeProductoPorOrdenDao, consultarUnidadesDeProductosPorOrdenOptimizadoDao, eliminarOrdenProduccionDao, ingresarOrdenProduccionDao } from "./ordenesproduccion.dao.js";
-import { procesarDetallesOrden } from "./ordenesproduccion.utils.js";
+import { procesarDetallesOrden, procesarDetallesOrdenBatch } from "./ordenesproduccion.utils.js";
 
 export const consultarOrdenProduccionService = async (idRol, idSucursal) => {
     try {
@@ -148,9 +148,9 @@ export const consultarDetalleOrdenPorCriteriosService = async (ordenTurno, fecha
   }
 };
 
-//servicios con queries optimizados
-//--------------------------------------------
-//--------------------------------------------
+// ------------------------------------------------------
+// ------------- SERVICIOS OPTIMIZADOS  -----------------
+//-------------------------------------------------------
 export const consultarUnidadesDeProductosPorOrdenOptimizadoService = async (idOrdenProduccion, idsProductos) => {
     try {
         const detalles = await consultarUnidadesDeProductosPorOrdenOptimizadoDao(idOrdenProduccion, idsProductos);
@@ -161,6 +161,53 @@ export const consultarUnidadesDeProductosPorOrdenOptimizadoService = async (idOr
         return {
             getDetalleOrden: (idProducto) => detallesMap.get(idProducto) ?? { idDetalleOrdenProduccion: 0 }
         };
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const ingresarOrdenProduccionServiceVersion2 = async (ordenProduccion) => {
+    try {
+        const { encabezadoOrden, detalleOrden } = ordenProduccion;
+
+        const ordenExist = await consultarDetalleOrdenPorCriteriosService(
+            encabezadoOrden.ordenTurno,
+            encabezadoOrden.fechaAProducir,
+            encabezadoOrden.idSucursal
+        );
+
+        if (ordenExist.encabezadoOrden !== null) {
+            const errorInfo = getError(19);
+            throw new CustomError(errorInfo);
+        }
+
+        const detallesActualizados = await procesarDetallesOrdenBatch(detalleOrden);
+
+        const resultado = await ingresarOrdenProduccionDao({
+            orden: encabezadoOrden,
+            detallesOrden: detallesActualizados
+        });
+
+        // 👈 validar aquí, antes de continuar
+        if (resultado.idOrdenGenerada === 0) {
+            const errorInfo = getError(2);
+            throw new CustomError(errorInfo);
+        }
+
+        const OrdenProdNew = {
+            detallesOrden: resultado.idDetalleOrdenProduccion.map((idDetalle, index) => ({
+                idDetalleOrdenProduccion: idDetalle,
+                ...detallesActualizados[index]
+            }))
+        };
+
+        const consumoOrdenProduccion = await CalcularCantidadIngredientesOptimizado(OrdenProdNew);
+
+        if (consumoOrdenProduccion && consumoOrdenProduccion.length > 0) {
+            await registrarBatchConsumoOrdenProduccionServices(consumoOrdenProduccion);
+        }
+
+        return resultado;
     } catch (error) {
         throw error;
     }

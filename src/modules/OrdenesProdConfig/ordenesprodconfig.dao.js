@@ -63,3 +63,20 @@ export const eliminarcantidadUnidadesDao = async (idProducto) => {
         throw new CustomError(dbError);
     }
 }
+
+// ------------------------------------------------------
+// ------------- QUERIES OPTIMIZADOS  -------------------
+//-------------------------------------------------------
+export const consultarCantidadUnidadesBatchDao = async (idsProductos) => {
+    try {
+        const placeholders = idsProductos.map(() => '?').join(', ');
+        const query = `SELECT idProducto, unidadesPorBandeja FROM CONFIGORDEN WHERE idProducto IN (${placeholders})`;
+        
+        const result = await Connection.execute(query, idsProductos);
+
+        return result.rows; // 👈 solo datos crudos
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}

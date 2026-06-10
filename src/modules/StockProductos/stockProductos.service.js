@@ -1,7 +1,7 @@
 import CustomError from "../../utils/CustomError.js";
 import { getError } from "../../utils/generalErrors.js";
 import { consultarDetalleOrdenProduccionService } from "../oredenesproduccion/ordenesproduccion.service.js";
-import { actualizarStockProductoDao, actualizarStockProductoDiarioDao, actualizarStockProductoDiariosBatchDao, actualizarStockProductosBatchDao, consultarStockDiarioPorSucursalDao, consultarStockProductoDao, consultarStockProductoDiarioDao, consultarStockProductoDiarioOptimizadoDao, consultarStockProductosDao, consultarStockProductosOptimizadoDao, IngresarHistorialStockBatchDao, IngresarHistorialStockDao, registrarStockProductoDao, registrarStockProductoDiarioDao } from "./stockProductos.dao.js";
+import { actualizarStockProductoDao, actualizarStockProductoDiarioDao, actualizarStockProductoDiariosBatchDao, actualizarStockProductosBatchDao, consultarStockDiarioPorSucursalDao, consultarStockProductoDao, consultarStockProductoDiarioDao, consultarStockProductoDiarioOptimizadoDao, consultarStockProductosDao, consultarStockProductosOptimizadoDao, IngresarHistorialStockBatchDao, IngresarHistorialStockDao, registrarStockProductoBatchDao, registrarStockProductoDao, registrarStockProductoDiarioBatchDao, registrarStockProductoDiarioDao } from "./stockProductos.dao.js";
 import { crearPayloadActualizarDebitoStockDiario, crearPayloadActualizarDebitoStockGeneral, crearPayloadEgresoPorVenta, crearPayloadHistorial, crearPayloadStockProductoDiarioExistente, crearPayloadStockProductoDiarioInexistente, payloadStockDiarioIngresoManualExistente, payloadStockDiarioIngresoManualInexistente, payloadStockProductoExistente, payloadStockProductoInexistente } from "./stockProductos.utils.js";
 
 /*------------------------------------------------------------------------------
@@ -344,13 +344,12 @@ export const elminarStockDiarioService = async (idOrdenProduccion) => {
 }
 
 
-//servicios con queries optimizados
-//----------------------------------------------------------------------------- 
-//----------------------------------------------------------------------------- 
+// ------------------------------------------------------
+// ------------- SERVICIOS OPTIMIZADOS  ------------------
+// ------------------------------------------------------
 export const consultarStockProductosOptimizadoService = async (idsProductos, idSucursal) => {
     try {
       const stockProductos = await consultarStockProductosOptimizadoDao(idsProductos, idSucursal);
-      
       const stockProductosMap = new Map(stockProductos.map(sp => [sp.idProducto, sp]));
 
       return {
@@ -412,6 +411,9 @@ export const descontarStockPorVentasOptimizado = async (venta) => {
                 payloadsStockDiario.push(
                     crearPayloadActualizarDebitoStockDiario(stockDiarioExistente, detalle, encabezadoVenta.idSucursal)
                 );
+                payloadsHistorial.push(                                                  // 👈 agregado
+                    crearPayloadEgresoPorVenta(detalle, encabezadoVenta, stockDiarioExistente)
+                );
             }
         });
 
@@ -426,3 +428,77 @@ export const descontarStockPorVentasOptimizado = async (venta) => {
         throw error;
     }
 }
+
+export const registrarStockProductosOptimizadoService = async (dataStockProducto) => {
+    try {
+        if (!Array.isArray(dataStockProducto.stockProductos)) {
+            throw new CustomError(getError(3));
+        }
+
+        const stockProductos = dataStockProducto.stockProductos;
+        const productosGeneral = stockProductos.filter(p => p.controlarStock === 1 && p.controlarStockDiario === 0);
+        const productosDiario  = stockProductos.filter(p => p.controlarStock === 0 && p.controlarStockDiario === 1);
+
+        // — Consultar existencia de todos en paralelo (2 queries en lugar de N)
+        const [stocksGenerales, stocksDiarios] = await Promise.all([
+            productosGeneral.length > 0
+                ? consultarStockProductosOptimizadoService(
+                      productosGeneral.map(p => p.idProducto),
+                      productosGeneral[0].idSucursal
+                  )
+                : new Map(),
+            productosDiario.length > 0
+                ? consultarStockProductoDiarioOptimizadoService(
+                      productosDiario.map(p => p.idProducto),
+                      productosDiario[0].idSucursal,
+                      productosDiario[0].fechaCreacion
+                  )
+                : new Map(),
+        ]);
+
+        // — Acumular payloads separados por operación
+        const payloadsInsertGeneral  = [];
+        const payloadsUpdateGeneral  = [];
+        const payloadsInsertDiario   = [];
+        const payloadsUpdateDiario   = [];
+        const payloadsHistorial      = [];
+
+        productosGeneral.forEach((producto) => {
+            const existente = stocksGenerales.getStock(producto.idProducto);
+            if (existente.idStock === 0) {
+                const payload = payloadStockProductoInexistente(producto);
+                payloadsInsertGeneral.push(payload);
+                payloadsHistorial.push(payload);
+            } else {
+                const payload = payloadStockProductoExistente(existente, producto);
+                payloadsUpdateGeneral.push(payload);
+                payloadsHistorial.push(payload);
+            }
+        });
+
+        productosDiario.forEach((producto) => {
+            const existente = stocksDiarios.getStockDiario(producto.idProducto);
+            if (existente.idStockDiario === 0) {
+                const payload = payloadStockDiarioIngresoManualInexistente(producto);
+                payloadsInsertDiario.push(payload);
+                payloadsHistorial.push(payload);
+            } else {
+                const payload = payloadStockDiarioIngresoManualExistente(existente, producto);
+                payloadsUpdateDiario.push(payload);
+                payloadsHistorial.push(payload);
+            }
+        });
+
+        // — Batch en paralelo
+        await Promise.all([
+            payloadsInsertGeneral.length > 0 ? registrarStockProductoBatchDao(payloadsInsertGeneral)          : Promise.resolve(),
+            payloadsUpdateGeneral.length > 0 ? actualizarStockProductosBatchDao(payloadsUpdateGeneral)        : Promise.resolve(),
+            payloadsInsertDiario.length  > 0 ? registrarStockProductoDiarioBatchDao(payloadsInsertDiario)     : Promise.resolve(),
+            payloadsUpdateDiario.length  > 0 ? actualizarStockProductoDiariosBatchDao(payloadsUpdateDiario)   : Promise.resolve(),
+            payloadsHistorial.length     > 0 ? IngresarHistorialStockBatchDao(payloadsHistorial)               : Promise.resolve(),
+        ]);
+
+    } catch (error) {
+        throw error;
+    }
+};

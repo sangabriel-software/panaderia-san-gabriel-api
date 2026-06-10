@@ -1,4 +1,4 @@
-import { consultarCantidadUnidadesService } from "../OrdenesProdConfig/ordenesprodconfig.service.js";
+import { consultarCantidadUnidadesBatchService, consultarCantidadUnidadesService } from "../OrdenesProdConfig/ordenesprodconfig.service.js";
 
 
 const calcularUnidadesTotales = (cantidadBase, cantidadBandejas) => {
@@ -24,4 +24,28 @@ export const procesarDetallesOrden = async (detalles) => {
       return detalle;
     })
   );
+};
+
+// ------------------------------------------------------
+// ------------- SERVICIOS OPTIMIZADOS  -----------------
+//-------------------------------------------------------
+export const procesarDetallesOrdenBatch = async (detalles) => {
+    const detallesBandejas = detalles.filter(d => d.tipoProduccion === 'bandejas');
+
+    const cantidadesMap = detallesBandejas.length > 0
+        ? await consultarCantidadUnidadesBatchService(detallesBandejas.map(d => d.idProducto))
+        : new Map();
+
+    return detalles.map((detalle) => {
+        if (detalle.tipoProduccion !== 'bandejas') return detalle;
+
+        const cantidadBase = cantidadesMap.get(detalle.idProducto);
+
+        return {
+            ...detalle,
+            cantidadUnidades: detalle.idCategoria === 1
+                ? calcularUnidadesTotales(cantidadBase, detalle.cantidadBandejas)
+                : detalle.cantidadUnidades
+        };
+    });
 };

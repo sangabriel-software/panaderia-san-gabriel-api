@@ -6,5 +6,5 @@ export const ventasRoutes = Router();
 
 ventasRoutes.post("/ingresar-venta", authMiddleware, ingresarVentaController);
 ventasRoutes.get("/consultar-venta-por-usuario", authMiddleware, consultarVentasPorUsuarioController);
-ventasRoutes.delete("/eliminar-venta/:idVenta", authMiddleware, elminarVentaController);
+ventasRoutes.delete("/eliminar-venta", authMiddleware, elminarVentaController);
 ventasRoutes.get("/consultar-detalle-venta/:idVenta", authMiddleware, consultarDetalleVentaController);

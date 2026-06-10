@@ -1,4 +1,4 @@
-import { consultarStockDiarioPorSucursalService, consultarStockProductoService, consultarStockProductosService, corregirStockProductosService, registrarStockProductosService } from "./stockProductos.service.js";
+import { consultarStockDiarioPorSucursalService, consultarStockProductoService, consultarStockProductosService, corregirStockProductosService, registrarStockProductosOptimizadoService } from "./stockProductos.service.js";
 
 export const consultarStockProductoController = async (req, res, next) => {
   try {
@@ -32,7 +32,7 @@ export const consultarStockProductosController = async (req, res, next) => {
 
 export const registrarStockProductoController = async (req, res, next) => {
   try {
-    const stockProducto = await registrarStockProductosService(req.body);
+    const stockProducto = await registrarStockProductosOptimizadoService(req.body);
     const responseData = {
       status: 201,
       message: "Inserción exitosa",

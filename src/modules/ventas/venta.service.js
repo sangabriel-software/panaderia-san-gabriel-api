@@ -32,28 +32,18 @@ export const ingresarVentaService = async (venta) => {
     }
 
     console.time("sobrantes");
-    const paylodSobrante = crearPayloadSobrante(
-      resVenta.idVenta,
-      venta.detalleVenta
-    );
+    const paylodSobrante = crearPayloadSobrante(resVenta.idVenta, venta.detalleVenta);
     await ingresarSobranteService(paylodSobrante);
     console.timeEnd("sobrantes");
 
     console.time("descontarStock");
-    await descontarStockPorVentasOptimizado(
-      ventaDetalleProcesado
-    );
+    await descontarStockPorVentasOptimizado(ventaDetalleProcesado);
     console.timeEnd("descontarStock");
 
     console.time("registrarIngreso");
-    const detalleingreso = crearPayloadingresos(
-      resVenta.idVenta,
-      ventaDetalleProcesado
-    );
+    const detalleingreso = crearPayloadingresos(resVenta.idVenta, ventaDetalleProcesado);
 
-    await registrarIngresoDiarioPorTurnoService(
-      detalleingreso
-    );
+    await registrarIngresoDiarioPorTurnoService(detalleingreso);
     console.timeEnd("registrarIngreso");
 
     if (
@@ -61,18 +51,13 @@ export const ingresarVentaService = async (venta) => {
       venta.gastosDiarios.detalleGastosDiarios
     ) {
       console.time("gastos");
-      await ingresarGastosDiariosService(
-        resVenta.idVenta,
-        venta.gastosDiarios
-      );
+      await ingresarGastosDiariosService(resVenta.idVenta, venta.gastosDiarios);
       console.timeEnd("gastos");
     }
 
     if (venta.encabezadoVenta.idOrdenProduccion) {
       console.time("cerrarOrden");
-      await actualizarEstadoOrdenProduccionServices(
-        resVenta.encabezadoVenta.idOrdenProduccion
-      );
+      await actualizarEstadoOrdenProduccionServices(resVenta.encabezadoVenta.idOrdenProduccion);
       console.timeEnd("cerrarOrden");
     }
 
@@ -115,10 +100,10 @@ export const consultarDetalleVentaService = async (idVenta) => {
   }
 }
 
-export const eliminarVentaService = async (idVenta) => {
+export const eliminarVentaService = async (idVenta, dateTime) => {
   try {
     const [detalleVenta, ventaPorId] = await Promise.all([
-      revertirVentaServices(idVenta),   // ya devuelve el detalle
+      revertirVentaServices(idVenta, dateTime),   // ya devuelve el detalle
       consultarVentaporId(idVenta),
     ]);
 
@@ -134,7 +119,7 @@ export const eliminarVentaService = async (idVenta) => {
       idUsuario:        ventaPorId.idUsuario,
       idSucursal:       ventaPorId.idSucursal,
       turno:            ventaPorId.ventaTurno,
-      fechaEliminacion: ventaPorId.fechaVenta,
+      fechaEliminacion: dateTime,
     };
 
     const detalleEliminacion = detalleVentaEliminadaPayload(detalleVenta);
@@ -150,7 +135,7 @@ export const eliminarVentaService = async (idVenta) => {
   }
 };
 
-export const revertirVentaServices = async (idVenta) => {
+export const revertirVentaServices = async (idVenta, dateTime) => {
     try {
         const detalleProductosVenta = await consultarDetalleVentaDao(idVenta);
         const { encabezadoVenta, detalleVenta } = detalleProductosVenta;
@@ -191,7 +176,7 @@ export const revertirVentaServices = async (idVenta) => {
                 stockAnterior:       productoEnStock.stock,
                 cantidad:            producto.cantidadVendida,
                 stockNuevo:          stockNuevo,
-                fechaActualizacion:  encabezadoVenta.fechaVenta,
+                fechaActualizacion:  dateTime,
                 observaciones:       'Revertir venta por eliminacion',
                 tipoReferencia:      'VENTA',
             });
@@ -218,7 +203,7 @@ export const revertirVentaServices = async (idVenta) => {
                 stockAnterior:       productoEnStockDiario.stock,
                 cantidad:            producto.cantidadVendida,
                 stockNuevo:          stockNuevo,
-                fechaActualizacion:  encabezadoVenta.fechaVenta,
+                fechaActualizacion:  dateTime,
                 observaciones:       'Revertir venta por eliminacion',
                 tipoReferencia:      'VENTA',
             });

@@ -143,3 +143,25 @@ export const elminarRecetaDao = async (idProducto) => {
         throw new CustomError(dbError);
     }
 }
+
+// ------------------------------------------------------
+// ------------- QUERIES OPTIMIZADAS  ------------------
+// ------------------------------------------------------
+export const consultarRecetaBatchDao = async (idsProductos) => {
+    try {
+        const placeholders = idsProductos.map(() => '?').join(', ');
+        const query = `SELECT r.idReceta, r.idProducto, p.nombreProducto, r.idIngrediente, i.nombreIngrediente, r.cantidadNecesaria, 
+                        r.unidadMedida 
+                        FROM recetas r
+                        INNER JOIN ingredientes i ON r.idIngrediente = i.idIngrediente
+                        INNER JOIN productos p ON r.idProducto = p.idProducto
+                        WHERE r.idProducto IN (${placeholders})`;
+
+        const result = await Connection.execute(query, idsProductos);
+
+        return result.rows; // datos crudos
+    } catch (error) {
+        const dbError = getDatabaseError(error.message);
+        throw new CustomError(dbError);
+    }
+}

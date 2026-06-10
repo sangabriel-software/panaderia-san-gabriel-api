@@ -1,4 +1,4 @@
-import { consultarDetalleOrdenPorCriteriosService, consultarDetalleOrdenProduccionService, consultarOrdenProduccionService, eliminarOrdenProduccionService, ingresarOrdenProduccionService } from "./ordenesproduccion.service.js";
+import { consultarDetalleOrdenPorCriteriosService, consultarDetalleOrdenProduccionService, consultarOrdenProduccionService, eliminarOrdenProduccionService, ingresarOrdenProduccionServiceVersion2 } from "./ordenesproduccion.service.js";
 
 
 export const consultarOrdenProduccionController = async (req, res, next) => {
@@ -47,7 +47,7 @@ export const eliminarOrdenProduccionController = async (req, res, next) => {
 
 export const ingresarOrdenProduccionController = async (req, res, next) => {
   try {
-    const idOrdenProduccion = await ingresarOrdenProduccionService(req.body);
+    const idOrdenProduccion = await ingresarOrdenProduccionServiceVersion2(req.body);
     const responseData = {
       status: 200,
       message: "Ingreso exitoso",
