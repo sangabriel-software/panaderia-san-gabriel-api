@@ -411,6 +411,9 @@ export const descontarStockPorVentasOptimizado = async (venta) => {
                 payloadsStockDiario.push(
                     crearPayloadActualizarDebitoStockDiario(stockDiarioExistente, detalle, encabezadoVenta.idSucursal)
                 );
+                payloadsHistorial.push(                                                  // 👈 agregado
+                    crearPayloadEgresoPorVenta(detalle, encabezadoVenta, stockDiarioExistente)
+                );
             }
         });
 

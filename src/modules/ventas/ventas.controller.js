@@ -32,8 +32,8 @@ export const consultarVentasPorUsuarioController = async (req, res, next) => {
 
 export const elminarVentaController = async (req, res, next) => {
   try {
-    const { idVenta } = req.params;
-    await eliminarVentaService(idVenta);
+    const { idVenta, dateTime } = req.query;
+    await eliminarVentaService(idVenta, dateTime);
     const responseData = {
       status: 200,
       message: "Eliminación exitosa",

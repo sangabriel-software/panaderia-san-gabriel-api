@@ -259,61 +259,27 @@ export const obtenerProductosPanaderiaVendidosOptimizado = async (encabezadoVent
     try {
         const idsProductos = ventaDetalle.map(d => d.idProducto);
 
-        // ✅ 4 queries en paralelo antes del loop — antes eran N*4 queries
-        const [descuentos, detallesOrden, stockProductos, stockProductosDiarios] = await Promise.all([
-            consultarDescuentoporProductosDao(idsProductos, idSucursal, encabezadoVenta.fechaVenta),
-            consultarUnidadesDeProductosPorOrdenOptimizadoService(encabezadoVenta.idOrdenProduccion, idsProductos),
+        const [stockProductos, stockProductosDiarios] = await Promise.all([
             consultarStockProductosOptimizadoService(idsProductos, idSucursal),
             consultarStockProductoDiarioOptimizadoService(idsProductos, idSucursal, encabezadoVenta.fechaVenta)
         ]);
 
-        // ✅ Sin async/await — todo es búsqueda en memoria
         const detallesEnOrden = ventaDetalle.map((detalle) => {
 
-            if (detalle.tipoProduccion === "bandejas" && encabezadoVenta.ventaTurno === "AM") {
-
-                const productoDescontado = descuentos.getDescuento(detalle.idProducto);
-                const detalleOrden = detallesOrden.getDetalleOrden(detalle.idProducto);
-
-                if (productoDescontado.idDescuento !== 0 && detalleOrden.idDetalleOrdenProduccion !== 0) {
-                    const cantidadRestante = detalleOrden.cantidadUnidades - productoDescontado.unidadesDescontadas;
-                    if (cantidadRestante > 0) {
-                        const cantidadVendida = calcularUnidadesDePanaderiaVendidas(cantidadRestante, detalle.unidadesNoVendidas);
-                        return {
-                            ...detalle,
-                            cantidadProducida: detalleOrden.cantidadUnidades,
-                            cantidadVendida,
-                        };
-                    }
-
-                } else if (productoDescontado.idDescuento === 0 && detalleOrden.idDetalleOrdenProduccion !== 0) {
-                    const cantidadVendida = calcularUnidadesDePanaderiaVendidas(detalleOrden.cantidadUnidades, detalle.unidadesNoVendidas);
+            if (detalle.controlarStock === 1 && detalle.controlarStockDiario === 0) {
+                const productoEnStock = stockProductos.getStock(detalle.idProducto);
+                if (productoEnStock.idStock !== 0 && productoEnStock.stock > 0) {
+                    const cantidadVendida = calcularUnidadesDePanaderiaVendidas(productoEnStock.stock, detalle.unidadesNoVendidas);
                     if (cantidadVendida > 0) {
-                        return {
-                            ...detalle,
-                            cantidadProducida: detalleOrden.cantidadUnidades,
-                            cantidadVendida,
-                        };
+                        return { ...detalle, cantidadVendida };
                     }
                 }
-
             } else {
-
-                if (detalle.controlarStock === 1 && detalle.controlarStockDiario === 0) {
-                    const productoEnStock = stockProductos.getStock(detalle.idProducto);
-                    if (productoEnStock.idStock !== 0 && productoEnStock.stock > 0) {
-                        const cantidadVendida = calcularUnidadesDePanaderiaVendidas(productoEnStock.stock, detalle.unidadesNoVendidas);
-                        if (cantidadVendida > 0) {
-                            return { ...detalle, cantidadVendida };
-                        }
-                    }
-                } else {
-                    const productoEnStockDiario = stockProductosDiarios.getStockDiario(detalle.idProducto);
-                    if (productoEnStockDiario.idStockDiario !== 0 && productoEnStockDiario.stock > 0) {
-                        const cantidadVendida = calcularUnidadesDePanaderiaVendidas(productoEnStockDiario.stock, detalle.unidadesNoVendidas);
-                        if (cantidadVendida > 0) {
-                            return { ...detalle, cantidadVendida };
-                        }
+                const productoEnStockDiario = stockProductosDiarios.getStockDiario(detalle.idProducto);
+                if (productoEnStockDiario.idStockDiario !== 0 && productoEnStockDiario.stock > 0) {
+                    const cantidadVendida = calcularUnidadesDePanaderiaVendidas(productoEnStockDiario.stock, detalle.unidadesNoVendidas);
+                    if (cantidadVendida > 0) {
+                        return { ...detalle, cantidadVendida };
                     }
                 }
             }
