@@ -128,3 +128,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Scripts de base de datos sensibles
+Script_BD/CREATE_TABLE.sql
+Script_BD/CREATE_USER.sql
+Script_BD/Tablas_apartir_de_03_0.sql
