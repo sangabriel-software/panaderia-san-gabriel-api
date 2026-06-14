@@ -43,7 +43,7 @@ export const procesarDetallesOrdenBatch = async (detalles) => {
 
         return {
             ...detalle,
-            cantidadUnidades: detalle.idCategoria === 1
+            cantidadUnidades: detalle.idCategoria === 1 || detalle.tipoProduccion === 'bandejas'
                 ? calcularUnidadesTotales(cantidadBase, detalle.cantidadBandejas)
                 : detalle.cantidadUnidades
         };
