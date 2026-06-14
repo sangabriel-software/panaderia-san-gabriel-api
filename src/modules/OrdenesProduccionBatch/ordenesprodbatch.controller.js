@@ -1,4 +1,4 @@
-import { ingresarOrdenProduccionBatchService } from "./OrdenesProdBatch.service.js";
+import { ingresarOrdenProduccionBatchService } from "./ordenesprodbatch.service.js";
 
 export const ingresarOrdenProduccionBatchController = async (req, res, next) => {
     try {
